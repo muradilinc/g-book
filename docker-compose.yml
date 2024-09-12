@@ -1,0 +1,52 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15.8-alpine3.20
+    container_name: postgres
+    environment:
+      POSTGRES_USER: muradil
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: book_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mynetwork
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nestjs-app
+    environment:
+      DATABASE_URL: "postgresql://muradil:12345@postgres:5432/book_db?schema=public"
+      JWT_SECRET: "secretKey"
+      JWT_EXPIRES_IN: "1h"
+    ports:
+      - '3000:3000'
+    depends_on:
+      - postgres
+    networks:
+      - mynetwork
+    volumes:
+      - .:/usr/src/app
+    command: npm run start:dev
+
+  prisma:
+    image: node:18-alpine
+    container_name: prisma
+    working_dir: /usr/src/app
+    volumes:
+      - .:/usr/src/app
+    command: npx prisma migrate dev
+    depends_on:
+      - postgres
+    networks:
+      - mynetwork
+
+volumes:
+  postgres_data:
+
+networks:
+  mynetwork:
